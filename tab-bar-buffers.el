@@ -87,8 +87,8 @@ A buffer is shown in the tab bar only if it is interesting."
   "Show buffers instead of tabs in tab-bar."
   :global t
   :group 'tab-bar-buffers
-  (if (eq tab-bar-tabs-function 'tab-bar-buffers) (setq tab-bar-tabs-function 'tab-bar-tabs)
-    (setq tab-bar-tabs-function 'tab-bar-buffers)))
+  (setq tab-bar-tabs-function
+	(if tab-bar-buffers-mode 'tab-bar-buffers 'tab-bar-tabs)))
 
 
 (defun tab-bar-buffers (&optional _frame)
