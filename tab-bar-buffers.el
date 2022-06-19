@@ -2,7 +2,7 @@
 
 ;; Author: Andy Rosen <ajr@corp.mlfs.org>
 ;; URL: https://github.com/ajrosen/emacs
-;; Version: 20220610.1412
+;; Version: 20220619.1816
 ;; Package-Requires: ((emacs "28.1"))
 ;; Keywords: convenience, frames
 
@@ -86,9 +86,15 @@ A buffer is shown in the tab bar only if it is interesting."
 (define-minor-mode tab-bar-buffers-mode
   "Show buffers instead of tabs in tab-bar."
   :global t
+  :interactive (tab-bar-mode)
   :group 'tab-bar-buffers
-  (setq tab-bar-tabs-function
-	(if tab-bar-buffers-mode 'tab-bar-buffers 'tab-bar-tabs)))
+  (if tab-bar-buffers-mode
+      (progn
+	(setq tab-bar-tabs-function 'tab-bar-buffers)
+	(tab-bar-buffers--define-keys))
+    (progn
+      (setq tab-bar-tabs-function 'tab-bar-tabs)
+      (tab-bar-buffers--undefine-keys))))
 
 
 (defun tab-bar-buffers (&optional _frame)
@@ -236,13 +242,40 @@ EVENT corresponds to a key event, or nil for mouse clicks."
     (kill-buffer)))
 
 
-(defalias 'tab-bar-new-tab 'tab-bar-buffer-new-buffer)
-(defalias 'tab-bar-select-tab 'tab-bar-buffer-select-buffer)
-(defalias 'tab-next 'tab-bar-buffer-next)
-(defalias 'tab-previous 'tab-bar-buffer-prev)
-(defalias 'tab-recent 'tab-bar-buffer-recent)
-(defalias 'tab-last 'tab-bar-buffer-last)
-(defalias 'tab-bar-close-tab 'tab-bar-buffer-close-buffer)
+;; tab-bar-buffers--define-keys
+(defun tab-bar-buffers--define-keys()
+  "Remap tab-bar key bindings to their tab-bar-buffers equivalents.
+
+See `tab-bar--define-keys'."
+  (fset 'tbb--new-tab (indirect-function 'tab-bar-new-tab))
+  (fset 'tbb--select-tab (indirect-function 'tab-bar-select-tab))
+  (fset 'tbb--next (indirect-function 'tab-next))
+  (fset 'tbb--previous (indirect-function 'tab-previous))
+  (fset 'tbb--recent (indirect-function 'tab-recent))
+  (fset 'tbb--last (indirect-function 'tab-last))
+  (fset 'tbb--close-tab (indirect-function 'tab-bar-close-tab))
+
+  (defalias 'tab-bar-new-tab 'tab-bar-buffer-new-buffer)
+  (defalias 'tab-bar-select-tab 'tab-bar-buffer-select-buffer)
+  (defalias 'tab-next 'tab-bar-buffer-next)
+  (defalias 'tab-previous 'tab-bar-buffer-prev)
+  (defalias 'tab-recent 'tab-bar-buffer-recent)
+  (defalias 'tab-last 'tab-bar-buffer-last)
+  (defalias 'tab-bar-close-tab 'tab-bar-buffer-close-buffer))
+
+
+;; tab-bar-buffers--undefine-keys
+(defun tab-bar-buffers--undefine-keys()
+  "Restore original tab-bar key bindings.
+
+See `tab-bar--undefine-keys'."
+  (fset 'tab-bar-new-tab 'tbb--new-tab)
+  (fset 'tab-bar-select-tab 'tbb--select-tab)
+  (fset 'tab-next 'tbb--next)
+  (fset 'tab-previous 'tbb--previous)
+  (fset 'tab-recent 'tbb--recent)
+  (fset 'tab-last 'tbb--last)
+  (fset 'tab-bar-close-tab 'tbb--close-tab))
 
 
 (provide 'tab-bar-buffers)
