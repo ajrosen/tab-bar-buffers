@@ -2,7 +2,7 @@
 
 ;; Author: Andy Rosen <ajr@corp.mlfs.org>
 ;; URL: https://github.com/ajrosen/emacs
-;; Version: 20220619.1816
+;; Version: 20220627.2012
 ;; Package-Requires: ((emacs "28.1"))
 ;; Keywords: convenience, frames
 
@@ -31,11 +31,15 @@
 
 ;; Installation:
 
-;; Add (`tab-bar-buffers-mode' t) to your init file.
+;; Add (`tab-bar-buffers-mode' t) to your `custom-file'.
+;;
+;; Or enable `tab-bar-buffers-mode` from the Easy Customization form.
+;;
+;; (customize-group 'tab-bar-buffers)
 
 ;; Some of tab-bar-mode's customization options are also relevant for
 ;; tab-bar-buffers.
-
+;;
 ;; `tab-bar-close-button-show'
 ;; `tab-bar-position'
 ;; `tab-bar-select-tab-modifiers'
@@ -48,11 +52,11 @@
 ;; The face for `tab-bar-tab' is used for `current-buffer'.
 ;; `tab-bar-tab-inactive' is used for all other buffers.
 
-;; Key and mouse bindings are preserved by aliasing some of
-;; tab-bar-mode's commands to their tab-bar-buffers equivalent, as
+;; Key and mouse bindings are preserved by advising some of
+;; tab-bar-mode's commands around their tab-bar-buffers equivalent, as
 ;; defined by `tab-bar--define-keys'.
 ;;
-;; `tab-bar-new-tab'
+;; `tab-new'
 ;; `tab-bar-select-tab'
 ;; `tab-next'
 ;; `tab-previous'
@@ -80,7 +84,7 @@ A buffer is shown in the tab bar only if it is interesting."
   :type '(repeat string)
   :group 'tab-bar-buffers
   :tag "Uninteresting Buffers"
-  :link '(function-link interesting-buffer-p))
+  :link '(function-link tab-bar-buffers--interesting-buffer-p))
 
 ;;;###autoload
 (define-minor-mode tab-bar-buffers-mode
@@ -100,15 +104,15 @@ A buffer is shown in the tab bar only if it is interesting."
 (defun tab-bar-buffers (&optional _frame)
   "Return a list of buffers for use as `tab-bar-tabs-function'.
 
-See `interesting-buffer-p' for what makes a buffer interesting."
+See `tab-bar-buffers--interesting-buffer-p' for what makes a buffer interesting."
   (mapcar
    (lambda (buffer)
-     (setq-local name-prop `(name . ,(tab-bar-buffer-name-format buffer)))
+     (setq-local name-prop `(name . ,(tab-bar-buffers--name-format buffer)))
      (if (eq buffer (current-buffer)) `(current-tab ,name-prop) `(tab ,name-prop)))
-   (interesting-buffers--sort)))
+   (tab-bar-buffers--interesting-buffers--sort)))
 
 
-(defun tab-bar-buffer-name-format (buffer)
+(defun tab-bar-buffers--name-format (buffer)
   "Function to format a BUFFER name in the tab bar.
 
 `tab-bar-tab-name-truncated-max' and `tab-bar-tab-name-ellipsis'
@@ -121,14 +125,14 @@ are honored if `tab-bar-tab-name-function' is
       n)))
 
 
-(defun tab-bar-buffer-current-buffer-number ()
+(defun tab-bar-buffers--current-buffer-number ()
   "Return `current-buffer's number."
-  (cl-position (current-buffer) (interesting-buffers--sort)))
+  (cl-position (current-buffer) (tab-bar-buffers--interesting-buffers--sort)))
 
 
 ;; Buffer selection
 
-(defun interesting-buffer-p (buffer)
+(defun tab-bar-buffers--interesting-buffer-p (buffer)
   "Check if BUFFER is interesting.
 
 A buffer is interesting if its name does not start with space, it
@@ -141,39 +145,41 @@ is visible, or it is not in `tab-bar-buffers-uninteresting-buffers'"
      (t t))))
 
 
-(defun interesting-buffers ()
-  "Return a list of interesting buffers.  See `interesting-buffer-p'."
+(defun tab-bar-buffers--interesting-buffers ()
+  "Return a list of interesting buffers.
+
+See `tab-bar-buffers--interesting-buffer-p'."
   (let ((ib nil) )
     (mapc
      (lambda (b)
-       (if (interesting-buffer-p b) (push b ib)))
+       (if (tab-bar-buffers--interesting-buffer-p b) (push b ib)))
      (buffer-list))
     ib))
 
 
-(defun interesting-buffers--sort ()
-  "Return a list of `interesting-buffers' sorted by name."
-  (sort (interesting-buffers) 'buffer-name-lessp))
+(defun tab-bar-buffers--interesting-buffers--sort ()
+  "Return a list of `tab-bar-buffers--interesting-buffers' sorted by name."
+  (sort (tab-bar-buffers--interesting-buffers) 'tab-bar-buffers--buffer-name-lessp))
 
 
-(defun buffer-name-lessp (buffer1 buffer2)
+(defun tab-bar-buffers--buffer-name-lessp (buffer1 buffer2)
   "Return non-nil if BUFFER1 is less than BUFFER2 in lexicographic order.
 
  See `string-lessp'."
   (string-lessp (buffer-name buffer1) (buffer-name buffer2)))
 
 
-(defun switch-to-buffer-by-number (&optional buffer-number)
+(defun tab-bar-buffers--switch-to-buffer-by-number (&optional buffer-number)
   "`switch-to-buffer' by its number.
 
-Buffers that are
-`interesting-buffer-p' are ordered by `buffer-name-lessp'.  If
+Buffers that are `tab-bar-buffers--interesting-buffer-p' are
+ordered by `tab-bar-buffers--buffer-name-lessp'.  If
 BUFFER-NUMBER is nil it is assumed we are being called from a
 mouse click event."
   (unless buffer-number
     (setq buffer-number (- (event-basic-type last-command-event) ?0 1)))
 
-  (let ((ib (interesting-buffers--sort)))
+  (let ((ib (tab-bar-buffers--interesting-buffers--sort)))
     (if (nth 1 ib)
 	(pop-to-buffer (nth buffer-number ib)))))
 
@@ -181,87 +187,77 @@ mouse click event."
 ;; Repurpose tab-bar navigation commands
 
 ;; tab-bar-new-tab
-(defun tab-bar-buffer-new-buffer (&optional _arg _from-number)
+(defun tab-bar-buffers-new-buffer (&optional _arg _from-number)
   "`switch-to-buffer' *scratch*."
   (interactive "P")
   (switch-to-buffer "*scratch*"))
 
 
 ;; tab-bar-select-tab
-(defun tab-bar-buffer-select-buffer (event)
+(defun tab-bar-buffers-select-buffer (_func &rest event)
   "Select the buffer at mouse click.
 
 EVENT corresponds to a key event, or nil for mouse clicks.
 
 See `tab-bar-mouse-down-1'."
-  (interactive "P")
-  (if event (switch-to-buffer-by-number (- event 1))
-    (switch-to-buffer-by-number)))
+  (if (car event) (tab-bar-buffers--switch-to-buffer-by-number (- (car event) 1))
+    (tab-bar-buffers--switch-to-buffer-by-number)))
 
 
 ;; tab-next
-(defun tab-bar-buffer-next ()
+(defun tab-bar-buffers-next (_func &rest _args)
   "Switch to the next buffer shown in the tab bar."
   (interactive)
-  (let* ((c (tab-bar-buffer-current-buffer-number))
-	 (l (length (interesting-buffers))))
+  (let* ((c (tab-bar-buffers--current-buffer-number))
+	 (l (length (tab-bar-buffers--interesting-buffers))))
     (when (and c (< (+ c 1) l))
-      (switch-to-buffer-by-number (+ c 1)))))
+      (tab-bar-buffers--switch-to-buffer-by-number (+ c 1)))))
 
 
 ;; tab-prev
-(defun tab-bar-buffer-prev ()
+(defun tab-bar-buffers-prev (_func &rest _args)
   "Switch to the previous buffer shown in the tab bar."
   (interactive)
-  (let ((c (tab-bar-buffer-current-buffer-number)))
+  (let ((c (tab-bar-buffers--current-buffer-number)))
     (when (and c (> c 0))
-      (switch-to-buffer-by-number (- c 1)))))
+      (tab-bar-buffers--switch-to-buffer-by-number (- c 1)))))
 
 
 ;; tab-recent
-(defun tab-bar-buffer-recent ()
+(defun tab-bar-buffers-recent (_func &rest _args)
   "Switch to most recently selected buffer as defined by `other-buffer'."
   (interactive)
-  (other-buffer))
+  (switch-to-buffer (other-buffer)))
 
 
 ;; tab-last
-(defun tab-bar-buffer-last ()
+(defun tab-bar-buffers-last (_func &rest _args)
   "Switch to the last buffer in the tab bar."
   (interactive)
-  (switch-to-buffer (car (last (interesting-buffers--sort)))))
+  (switch-to-buffer (car (last (tab-bar-buffers--interesting-buffers--sort)))))
 
 
 ;; tab-bar-close-tab
-(defun tab-bar-buffer-close-buffer (event)
+(defun tab-bar-buffers-close-buffer (_func &rest event)
   "Call `kill-buffer' on the selected buffer.
 
 EVENT corresponds to a key event, or nil for mouse clicks."
-  (interactive "e")
-  (if event (kill-buffer (nth (- event 1) (interesting-buffers--sort)))
+  (if (car event) (kill-buffer (nth (- (car event) 1) (tab-bar-buffers--interesting-buffers--sort)))
     (kill-buffer)))
 
 
 ;; tab-bar-buffers--define-keys
 (defun tab-bar-buffers--define-keys()
-  "Remap tab-bar key bindings to their tab-bar-buffers equivalents.
+  "Remap tab-bar key bindings to their `tab-bar-buffers` equivalents.
 
 See `tab-bar--define-keys'."
-  (fset 'tbb--new-tab (indirect-function 'tab-bar-new-tab))
-  (fset 'tbb--select-tab (indirect-function 'tab-bar-select-tab))
-  (fset 'tbb--next (indirect-function 'tab-next))
-  (fset 'tbb--previous (indirect-function 'tab-previous))
-  (fset 'tbb--recent (indirect-function 'tab-recent))
-  (fset 'tbb--last (indirect-function 'tab-last))
-  (fset 'tbb--close-tab (indirect-function 'tab-bar-close-tab))
-
-  (defalias 'tab-bar-new-tab 'tab-bar-buffer-new-buffer)
-  (defalias 'tab-bar-select-tab 'tab-bar-buffer-select-buffer)
-  (defalias 'tab-next 'tab-bar-buffer-next)
-  (defalias 'tab-previous 'tab-bar-buffer-prev)
-  (defalias 'tab-recent 'tab-bar-buffer-recent)
-  (defalias 'tab-last 'tab-bar-buffer-last)
-  (defalias 'tab-bar-close-tab 'tab-bar-buffer-close-buffer))
+  (advice-add 'tab-new :around #'tab-bar-buffers-new-buffer)
+  (advice-add 'tab-bar-select-tab :around #'tab-bar-buffers-select-buffer)
+  (advice-add 'tab-next :around #'tab-bar-buffers-next)
+  (advice-add 'tab-previous :around #'tab-bar-buffers-prev)
+  (advice-add 'tab-recent :around #'tab-bar-buffers-recent)
+  (advice-add 'tab-last :around #'tab-bar-buffers-last)
+  (advice-add 'tab-bar-close-tab :around #'tab-bar-buffers-close-buffer))
 
 
 ;; tab-bar-buffers--undefine-keys
@@ -269,13 +265,13 @@ See `tab-bar--define-keys'."
   "Restore original tab-bar key bindings.
 
 See `tab-bar--undefine-keys'."
-  (fset 'tab-bar-new-tab 'tbb--new-tab)
-  (fset 'tab-bar-select-tab 'tbb--select-tab)
-  (fset 'tab-next 'tbb--next)
-  (fset 'tab-previous 'tbb--previous)
-  (fset 'tab-recent 'tbb--recent)
-  (fset 'tab-last 'tbb--last)
-  (fset 'tab-bar-close-tab 'tbb--close-tab))
+  (advice-remove 'tab-new #'tab-bar-buffers-new-buffer)
+  (advice-remove 'tab-bar-select-tab #'tab-bar-buffers-select-buffer)
+  (advice-remove 'tab-next #'tab-bar-buffers-next)
+  (advice-remove 'tab-previous #'tab-bar-buffers-prev)
+  (advice-remove 'tab-recent #'tab-bar-buffers-recent)
+  (advice-remove 'tab-last #'tab-bar-buffers-last)
+  (advice-remove 'tab-bar-close-tab #'tab-bar-buffers-close-buffer))
 
 
 (provide 'tab-bar-buffers)

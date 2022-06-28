@@ -35,11 +35,11 @@ are honored.
 The face for `tab-bar-tab` is used for `current-buffer`.
 `tab-bar-tab-inactive` is used for all other buffers.
 
-Key and mouse bindings are preserved by aliasing some of
-tab-bar-mode's commands to their tab-bar-buffers equivalent, as
+Key and mouse bindings are preserved by advising some of
+tab-bar-mode's commands around their tab-bar-buffers equivalent, as
 defined by `tab-bar--define-keys`.
 
-- tab-bar-new-tab
+- tab-new
 - tab-bar-select-tab
 - tab-next
 - tab-previous
