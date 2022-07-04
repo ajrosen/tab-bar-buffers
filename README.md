@@ -1,3 +1,5 @@
+[![MELPA](https://melpa.org/packages/tab-bar-buffers-badge.svg)](https://melpa.org/#/tab-bar-buffers)
+
 # tab-bar-buffers
 
 This package piggy-backs on *tab-bar-mode* to implement a simple buffer manager.  Instead of managing tabs it manages buffers.
