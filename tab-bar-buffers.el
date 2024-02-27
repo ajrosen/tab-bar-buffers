@@ -2,7 +2,7 @@
 
 ;; Author: Andy Rosen <ajr@corp.mlfs.org>
 ;; URL: https://github.com/ajrosen/tab-bar-buffers
-;; Version: 20220722.1535
+;; Version: 20240210.1209
 ;; Package-Requires: ((emacs "28.1"))
 ;; Keywords: convenience, frames
 
@@ -84,13 +84,33 @@
   :group 'tab-bar)
 
 (defcustom tab-bar-buffers-uninteresting-buffers
-  (list "*Backtrace*" "*Completions*" "*Help*" "*Messages*")
+  (list nil)
   "A list of buffer names that are not interesting.
 
 A buffer is shown in the tab bar only if it is interesting."
   :type '(repeat string)
   :group 'tab-bar-buffers
   :tag "Uninteresting Buffers"
+  :link '(function-link tab-bar-buffers--interesting-buffer-p))
+
+(defcustom tab-bar-buffers-uninteresting-prefixes
+  (list " " "*")
+  "A list of buffer name prefixes that are not interesting.
+
+A buffer is shown in the tab bar only if it is interesting."
+  :type '(repeat string)
+  :group 'tab-bar-buffers
+  :tag "Uninteresting Prefixes"
+  :link '(function-link tab-bar-buffers--interesting-buffer-p))
+
+(defcustom tab-bar-buffers-interesting-buffers
+  (list "*Help*")
+  "A list of buffer names that are always interesting.
+
+A buffer is shown in the tab bar only if it is interesting."
+  :type '(repeat string)
+  :group 'tab-bar-buffers
+  :tag "Interesting Buffers"
   :link '(function-link tab-bar-buffers--interesting-buffer-p))
 
 ;;;###autoload
@@ -146,8 +166,9 @@ A buffer is interesting if its name does not start with space, it
 is visible, or it is not in `tab-bar-buffers-uninteresting-buffers'"
   (let ((n (buffer-name buffer)))
     (cond
-     ((string-prefix-p " " n) nil)
      ((get-buffer-window n) t)
+     ((seq-contains-p tab-bar-buffers-interesting-buffers n) t)
+     ((seq-contains-p tab-bar-buffers-uninteresting-prefixes n 'string-prefix-p) nil)
      ((seq-contains-p tab-bar-buffers-uninteresting-buffers n) nil)
      (t t))))
 
