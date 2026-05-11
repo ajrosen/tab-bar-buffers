@@ -31,7 +31,7 @@ Or enable `tab-bar-buffers-mode` from the Easy Customization form.
  
 If `tab-bar-buffers-mode` determines a buffer is uninteresting, it will **not** be shown in the tab bar.
  
-Visible buffers are always shown.
+Buffers in a window with the `no-other-window` property set are never shown.  Visible buffers are always shown.
 
 Some of tab-bar-mode's customization options are also relevant for tab-bar-buffers.
 

@@ -95,12 +95,11 @@
   :group 'tab-bar)
 
 (defcustom tab-bar-buffers-uninteresting-buffers
-  (list nil)
+  nil
   "A list of buffer names that are not interesting.
 
 A buffer is shown in the tab bar only if it is interesting."
   :type '(repeat string)
-  :group 'tab-bar-buffers
   :tag "Uninteresting Buffers"
   :link '(function-link tab-bar-buffers--interesting-buffer-p))
 
@@ -110,7 +109,6 @@ A buffer is shown in the tab bar only if it is interesting."
 
 A buffer is shown in the tab bar only if it is interesting."
   :type '(repeat string)
-  :group 'tab-bar-buffers
   :tag "Uninteresting Prefixes"
   :link '(function-link tab-bar-buffers--interesting-buffer-p))
 
@@ -120,7 +118,6 @@ A buffer is shown in the tab bar only if it is interesting."
 
 A buffer is shown in the tab bar only if it is interesting."
   :type '(repeat string)
-  :group 'tab-bar-buffers
   :tag "Interesting Buffers"
   :link '(function-link tab-bar-buffers--interesting-buffer-p))
 
@@ -129,7 +126,6 @@ A buffer is shown in the tab bar only if it is interesting."
   "Show buffers instead of tabs in tab-bar."
   :global t
   :interactive (tab-bar-mode)
-  :group 'tab-bar-buffers
   (if tab-bar-buffers-mode
       (progn
 	(setq tab-bar-tabs-function 'tab-bar-buffers)
@@ -171,18 +167,22 @@ are honored if `tab-bar-tab-name-function' is
 ;; Buffer selection
 
 (defun tab-bar-buffers--interesting-buffer-p (buffer)
-  "Check if BUFFER is interesting.
+  "Returns `t' if BUFFER is interesting, otherwise returns `nil'.
 
-A buffer is interesting if its name does not start with space, it
-is visible, or it is not in `tab-bar-buffers-uninteresting-buffers'"
+A buffer is interesting if its window does not have the
+`no-other-window' property set, it is visible, it is in
+`tab-bar-buffers-interesting-buffers', or it does not match a prefix in
+`tab-bar-buffers-uninteresting-prefixes' and it is not in
+`tab-bar-buffers-uninteresting-buffers'."
+
   (let ((n (buffer-name buffer)))
     (cond
+     ((window-parameter (get-buffer-window n) 'no-other-window) nil)
      ((get-buffer-window n) t)
      ((seq-contains-p tab-bar-buffers-interesting-buffers n) t)
      ((seq-contains-p tab-bar-buffers-uninteresting-prefixes n 'string-prefix-p) nil)
      ((seq-contains-p tab-bar-buffers-uninteresting-buffers n) nil)
      (t t))))
-
 
 (defun tab-bar-buffers--interesting-buffers ()
   "Return a list of interesting buffers.
